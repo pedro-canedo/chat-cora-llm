@@ -50,7 +50,7 @@ services:
     build: ./frontend
     environment:
       VITE_API_URL: http://152.67.41.171:5001 # Comunicação interna
-      VITE_CHAT_SERVICE_URL: http://localhost:11434
+      VITE_CHAT_SERVICE_URL: http://172.17.0.1:11434
     ports:
       - "5173:5173"
     depends_on:
