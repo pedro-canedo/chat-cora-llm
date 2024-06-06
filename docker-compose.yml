@@ -11,6 +11,13 @@ services:
       - "5432:5432"
     volumes:
       - db-data:/var/lib/postgresql/data
+    networks:
+      - my_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U user"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
 
   pgadmin:
     image: dpage/pgadmin4
@@ -21,6 +28,8 @@ services:
       - "8080:80"
     depends_on:
       - db
+    networks:
+      - my_network
 
   backend:
     build: ./backend
@@ -33,20 +42,28 @@ services:
       - db
     volumes:
       - ./backend:/usr/src/app
-      - /usr/src/app/node_modules # Para evitar problemas de permissão
+      - /usr/src/app/node_modules
+    networks:
+      - my_network
 
   frontend:
     build: ./frontend
     environment:
-      VITE_API_URL: http://140.238.191.187:5001
-      VITE_CHAT_SERVICE_URL: http://140.238.191.187:11434
+      VITE_API_URL: http://backend:5001 # Comunicação interna
+      VITE_CHAT_SERVICE_URL: http://host.docker.internal:11434 # Comunicação com a API externa no host
     ports:
       - "5173:5173"
     depends_on:
       - backend
     volumes:
       - ./frontend:/usr/src/app
-      - /usr/src/app/node_modules # Para evitar problemas de permissão
+      - /usr/src/app/node_modules
+    networks:
+      - my_network
 
 volumes:
   db-data:
+
+networks:
+  my_network:
+    driver: bridge
