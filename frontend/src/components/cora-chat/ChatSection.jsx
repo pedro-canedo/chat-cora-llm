@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import axios from 'axios';
 import { Box, TextField, Paper, Grid, useMediaQuery, useTheme, IconButton, Typography, Tooltip } from '@mui/material';
 import Message from './Message';
 import SideNav from '../cora-sidebar/SideNav';
@@ -59,14 +60,10 @@ const ChatSection = () => {
 
     const fetchConversations = async () => {
         try {
-            const response = await fetch(`${config.API_URL}/conversations`);
-            if (!response.ok) {
-                throw new Error(`HTTP error! Status: ${response.status}`);
-            }
-            const data = await response.json();
-            setConversations(data);
-            if (data.length > 0) {
-                setCurrentConversation(data[0]);
+            const response = await axios.get(`${config.API_URL}/conversations`);
+            setConversations(response.data);
+            if (response.data.length > 0) {
+                setCurrentConversation(response.data[0]);
             }
         } catch (error) {
             console.error("Error fetching conversations:", error);
@@ -75,12 +72,8 @@ const ChatSection = () => {
 
     const fetchMessages = async (conversationId) => {
         try {
-            const response = await fetch(`${config.API_URL}/conversations/${conversationId}/messages`);
-            if (!response.ok) {
-                throw new Error(`HTTP error! Status: ${response.status}`);
-            }
-            const data = await response.json();
-            setMessages(data);
+            const response = await axios.get(`${config.API_URL}/conversations/${conversationId}/messages`);
+            setMessages(response.data);
         } catch (error) {
             console.error("Error fetching messages:", error);
         }
@@ -88,20 +81,10 @@ const ChatSection = () => {
 
     const createConversation = async (title) => {
         try {
-            const response = await fetch(`${config.API_URL}/conversations`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ title }),
-            });
-            if (!response.ok) {
-                throw new Error('Failed to create conversation');
-            }
-            const data = await response.json();
-            setConversations([...conversations, data]);
-            setCurrentConversation(data);
-            return data;
+            const response = await axios.post(`${config.API_URL}/conversations`, { title });
+            setConversations([...conversations, response.data]);
+            setCurrentConversation(response.data);
+            return response.data;
         } catch (error) {
             console.error("Error creating conversation:", error);
         }
@@ -123,25 +106,16 @@ const ChatSection = () => {
             setMessages((prevMessages) => [...prevMessages, aiMessage]);
 
             try {
-                controllerRef.current = new AbortController();
-                // const response = await fetch(`${config.CHAT_SERVICE_URL}/api/generate`, {
-                const response = await fetch(`api/generate`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        model: 'llama3',
-                        prompt: input,
-                    }),
-                    signal: controllerRef.current.signal,
+                const response = await axios.post(`${config.CHAT_SERVICE_URL}/api/generate`, {
+                    model: 'llama3',
+                    prompt: input,
                 });
 
-                if (!response.ok) {
+                if (!response.status === 200) {
                     throw new Error('Network response was not ok');
                 }
 
-                const reader = response.body.getReader();
+                const reader = response.data.getReader();
                 const decoder = new TextDecoder();
                 let done = false;
 
@@ -169,13 +143,11 @@ const ChatSection = () => {
                     }
                 }
             } catch (error) {
-                if (error.name !== 'AbortError') {
-                    console.error('Failed to fetch response from API:', error);
-                    setMessages((prevMessages) => [...prevMessages.slice(0, -1), { content: errorMessages[Math.floor(Math.random() * errorMessages.length)], sender: 'Cora' }]);
-                    setApiUnavailable(true);
-                    setRetryEnabled(true);
-                    setRetryCountdown(10); // 10 segundos
-                }
+                console.error('Failed to fetch response from API:', error);
+                setMessages((prevMessages) => [...prevMessages.slice(0, -1), { content: errorMessages[Math.floor(Math.random() * errorMessages.length)], sender: 'Cora' }]);
+                setApiUnavailable(true);
+                setRetryEnabled(true);
+                setRetryCountdown(10); // 10 segundos
                 setLoading(false);
             }
         }
@@ -210,9 +182,7 @@ const ChatSection = () => {
 
     const clearChat = async () => {
         if (currentConversation) {
-            await fetch(`${config.API_URL}/conversations/${currentConversation.id}`, {
-                method: 'DELETE',
-            });
+            await axios.delete(`${config.API_URL}/conversations/${currentConversation.id}`);
             setConversations(conversations.filter(convo => convo.id !== currentConversation.id));
             setCurrentConversation(conversations[0] || null);
         }
