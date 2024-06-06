@@ -125,7 +125,7 @@ const ChatSection = () => {
             try {
                 controllerRef.current = new AbortController();
                 // const response = await fetch(`${config.CHAT_SERVICE_URL}/api/generate`, {
-                const response = await fetch(`127.0.0.1:11434/api/generate`, {
+                const response = await fetch(`api/generate`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
