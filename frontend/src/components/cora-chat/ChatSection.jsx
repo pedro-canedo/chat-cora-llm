@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Box, TextField, Paper, Grid, useMediaQuery, useTheme, IconButton, Typography, Button } from '@mui/material';
+import { Box, TextField, Paper, Grid, useMediaQuery, useTheme, IconButton, Typography, Tooltip } from '@mui/material';
 import Message from './Message';
 import SideNav from '../cora-sidebar/SideNav';
 import SendIcon from '@mui/icons-material/Send';
@@ -17,6 +17,7 @@ const ChatSection = () => {
     const [input, setInput] = useState('');
     const [loading, setLoading] = useState(false);
     const [retryEnabled, setRetryEnabled] = useState(false);
+    const [retryCountdown, setRetryCountdown] = useState(0);
     const [userImage, setUserImage] = useState(() => {
         return localStorage.getItem('userImage');
     });
@@ -46,6 +47,15 @@ const ChatSection = () => {
             fetchMessages(currentConversation.id);
         }
     }, [currentConversation]);
+
+    useEffect(() => {
+        if (retryCountdown > 0) {
+            const timer = setTimeout(() => setRetryCountdown(retryCountdown - 1), 1000);
+            return () => clearTimeout(timer);
+        } else if (retryCountdown === 0) {
+            setRetryEnabled(false);
+        }
+    }, [retryCountdown]);
 
     const fetchConversations = async () => {
         try {
@@ -163,7 +173,7 @@ const ChatSection = () => {
                     setMessages((prevMessages) => [...prevMessages.slice(0, -1), { content: errorMessages[Math.floor(Math.random() * errorMessages.length)], sender: 'Cora' }]);
                     setApiUnavailable(true);
                     setRetryEnabled(true);
-                    setTimeout(() => setRetryEnabled(false), 10000);  // 10 segundos
+                    setRetryCountdown(10); // 10 segundos
                 }
                 setLoading(false);
             }
@@ -281,12 +291,16 @@ const ChatSection = () => {
                                     backgroundColor: theme.palette.background.paper,
                                 },
                                 endAdornment: (
-                                    <IconButton
-                                        onClick={loading ? handleStop : handleSend}
-                                        disabled={!input.trim() && !loading}
-                                    >
-                                        {loading ? <StopIcon /> : <SendIcon />}
-                                    </IconButton>
+                                    <Tooltip title={retryEnabled ? `Aguarde ${retryCountdown} segundos para tentar novamente` : ''}>
+                                        <span>
+                                            <IconButton
+                                                onClick={loading ? handleStop : handleSend}
+                                                disabled={(!input.trim() && !loading) || retryEnabled}
+                                            >
+                                                {loading ? <StopIcon /> : <SendIcon />}
+                                            </IconButton>
+                                        </span>
+                                    </Tooltip>
                                 )
                             }}
                             style={{
@@ -296,17 +310,6 @@ const ChatSection = () => {
                         />
                     </Grid>
                 </Grid>
-                {retryEnabled && (
-                    <Grid container justifyContent="center" style={{ marginTop: 10 }}>
-                        <Button
-                            variant="contained"
-                            color="primary"
-                            onClick={handleSend}
-                        >
-                            Tentar Novamente
-                        </Button>
-                    </Grid>
-                )}
             </Paper>
         </Box>
     );
