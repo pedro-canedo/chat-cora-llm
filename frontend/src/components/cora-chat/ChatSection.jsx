@@ -146,7 +146,7 @@ const ChatSection = () => {
             } catch (error) {
                 if (error.name !== 'AbortError') {
                     console.error('Failed to fetch response from API:', error);
-                    setMessages((prevMessages) => [...prevMessages.slice(0, -1), { content: 'Failed to fetch response from API.', sender: 'Cora' }]);
+                    setMessages((prevMessages) => [...prevMessages.slice(0, -1), { content: 'Desculpe, estou tendo um pequeno curto-circuito mental agora. Preciso de alguns minutos para meditar e recalibrar meus circuitos. Be right back, humano! 🤖✨', sender: 'Cora' }]);
                     setApiUnavailable(true);
                 }
                 setLoading(false);
@@ -218,7 +218,7 @@ const ChatSection = () => {
                 ))}
                 {apiUnavailable && (
                     <Typography variant="body2" color="error" align="center">
-                        Estamos sem contato com a Cora por enquanto, tente daqui a pouco.
+                        O contato com a Cora está temporariamente indisponível. Por favor, tente novamente mais tarde.
                     </Typography>
                 )}
             </Box>
