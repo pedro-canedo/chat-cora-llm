@@ -1,6 +1,6 @@
 import axios from 'axios';
 import React, { useState, useEffect, useRef } from 'react';
-import { Box, TextField, Paper, Grid, useMediaQuery, useTheme, IconButton, Typography, Tooltip } from '@mui/material';
+import { Box, TextField, Paper, Grid, useMediaQuery, useTheme, IconButton, Typography, Tooltip, Button } from '@mui/material';
 import Message from './Message';
 import SideNav from '../cora-sidebar/SideNav';
 import SendIcon from '@mui/icons-material/Send';
@@ -109,9 +109,9 @@ const ChatSection = () => {
                 const response = await axios.post(`${config.CHAT_SERVICE_URL}/api/generate`, {
                     model: 'llama3',
                     prompt: input,
-                });
+                }, { responseType: 'stream' });
 
-                if (!response.status === 200) {
+                if (response.status !== 200) {
                     throw new Error('Network response was not ok');
                 }
 
@@ -144,10 +144,12 @@ const ChatSection = () => {
                 }
             } catch (error) {
                 console.error('Failed to fetch response from API:', error);
-                setMessages((prevMessages) => [...prevMessages.slice(0, -1), { content: errorMessages[Math.floor(Math.random() * errorMessages.length)], sender: 'Cora' }]);
-                setApiUnavailable(true);
-                setRetryEnabled(true);
-                setRetryCountdown(10); // 10 segundos
+                if (error.name !== 'AbortError') {
+                    setMessages((prevMessages) => [...prevMessages.slice(0, -1), { content: errorMessages[Math.floor(Math.random() * errorMessages.length)], sender: 'Cora' }]);
+                    setApiUnavailable(true);
+                    setRetryEnabled(true);
+                    setRetryCountdown(10); // 10 segundos
+                }
                 setLoading(false);
             }
         }
@@ -281,6 +283,17 @@ const ChatSection = () => {
                         />
                     </Grid>
                 </Grid>
+                {retryEnabled && (
+                    <Grid container justifyContent="center" style={{ marginTop: 10 }}>
+                        <Button
+                            variant="contained"
+                            color="primary"
+                            onClick={handleSend}
+                        >
+                            Tentar Novamente
+                        </Button>
+                    </Grid>
+                )}
             </Paper>
         </Box>
     );

@@ -1,8 +1,24 @@
+// frontend/src/components/cora-sidebar/SideNav.jsx
 import React from 'react';
 import { Drawer, List, ListItem, ListItemText, Divider, Button, IconButton } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
+import { auth } from '../../firebaseConfig';  // Import the auth instance from your Firebase configuration
+import { signOut } from 'firebase/auth';  // Import the signOut method
 
 const SideNav = ({ open, handleMenuClose, clearChat, handleImageUpload, conversations = [], selectConversation }) => {
+
+    const handleLogout = () => {
+        signOut(auth).then(() => {
+            // Clear user session data
+            localStorage.removeItem('messages');
+            localStorage.removeItem('userImage');
+            console.log('Logout successful');
+            window.location.reload();
+        }).catch(error => {
+            console.error("Error signing out: ", error);
+        });
+    };
+
     return (
         <Drawer anchor="left" open={open} onClose={handleMenuClose}>
             <div style={{ width: 250, padding: 20 }}>
@@ -31,7 +47,7 @@ const SideNav = ({ open, handleMenuClose, clearChat, handleImageUpload, conversa
                     <ListItem button>
                         <ListItemText primary="Update & FAQs" />
                     </ListItem>
-                    <ListItem button>
+                    <ListItem button onClick={() => { console.log('Logout button clicked'); handleLogout(); }}>
                         <ListItemText primary="Log out" />
                     </ListItem>
                 </List>
