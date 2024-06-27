@@ -1,14 +1,15 @@
-import axios from 'axios';
 import React, { useState, useEffect, useRef } from 'react';
 import { Box, TextField, Paper, Grid, useMediaQuery, useTheme, IconButton, Typography, Tooltip, Button } from '@mui/material';
+import { fetchUserConversations, fetchMessagesFromDatabase, syncMessagesWithDatabase, createConversation, sendMessage, addAiMessage, clearChat } from '../../services/firebase/db';
+import { generateAIResponse } from '../../services/llm/api';
+import { errorMessages } from './messages';
 import Message from './Message';
 import SideNav from '../cora-sidebar/SideNav';
 import SendIcon from '@mui/icons-material/Send';
 import StopIcon from '@mui/icons-material/Stop';
 import NavBar from '../cora-navbar/NavBar';
-import config from '../../config';
 
-const ChatSection = () => {
+const ChatSection = ({ userId }) => {
     const theme = useTheme();
     const isSmallScreen = useMediaQuery(theme.breakpoints.down('sm'));
 
@@ -26,28 +27,15 @@ const ChatSection = () => {
     const [apiUnavailable, setApiUnavailable] = useState(false);
     const controllerRef = useRef(null);
 
-    const errorMessages = [
-        "Desculpe, estou tendo um pequeno curto-circuito mental agora. Preciso de alguns minutos para meditar e recalibrar meus circuitos. Be right back, humano! 🤖✨",
-        "Algo deu errado em minha lógica. Vou precisar de um momento para resolver isso. Volto logo! 🛠️",
-        "Ops! Estou enfrentando um bug inesperado. Preciso de um tempo para me recuperar. Até já! 💻🔧",
-        "Ai, ai! Acho que meu processador ficou sobrecarregado. Dê-me alguns segundos para me recompor. 🤯",
-        "Estou com dificuldades para conectar. Vou me reconfigurar e tentar novamente em breve. 🌐🚧",
-        "Meus circuitos estão um pouco confusos agora. Vou precisar de um momento para resolver isso. ⚙️🔄",
-        "Parece que algo não está funcionando como deveria. Dê-me um instante para corrigir isso. 🔍🛠️",
-        "Estou um pouco sobrecarregada no momento. Por favor, aguarde enquanto eu resolvo isso. ⏳💡",
-        "Algo não saiu conforme o esperado. Vou fazer uma pausa rápida para ajustar. Até já! ⏱️",
-        "Ops! Parece que estou tendo problemas técnicos. Vou resolver isso e volto já. 🔧💻"
-    ];
-
     useEffect(() => {
-        fetchConversations();
-    }, []);
+        fetchUserConversations(userId, setConversations);
+    }, [userId]);
 
     useEffect(() => {
         if (currentConversation) {
-            fetchMessages(currentConversation.id);
+            fetchMessagesFromCacheOrDatabase(userId, currentConversation.id);
         }
-    }, [currentConversation]);
+    }, [currentConversation, userId]);
 
     useEffect(() => {
         if (retryCountdown > 0) {
@@ -58,99 +46,81 @@ const ChatSection = () => {
         }
     }, [retryCountdown]);
 
-    const fetchConversations = async () => {
-        try {
-            const response = await axios.get(`${config.API_URL}/conversations`);
-            setConversations(response.data);
-            if (response.data.length > 0) {
-                setCurrentConversation(response.data[0]);
+    useEffect(() => {
+        const interval = setInterval(() => {
+            if (currentConversation) {
+                syncMessagesWithDatabase(userId, currentConversation.id);
             }
-        } catch (error) {
-            console.error("Error fetching conversations:", error);
+        }, 1000);
+
+        return () => clearInterval(interval);
+    }, [currentConversation, messages, userId]);
+
+    const fetchMessagesFromCacheOrDatabase = async (userId, conversationId) => {
+        const cachedMessages = localStorage.getItem(`messages_${conversationId}`);
+        if (cachedMessages) {
+            setMessages(JSON.parse(cachedMessages).sort((a, b) => a.timestamp - b.timestamp));
+        } else {
+            fetchMessagesFromDatabase(userId, conversationId, (msgs) => {
+                setMessages(msgs);
+            });
         }
     };
 
-    const fetchMessages = async (conversationId) => {
-        try {
-            const response = await axios.get(`${config.API_URL}/conversations/${conversationId}/messages`);
-            setMessages(response.data);
-        } catch (error) {
-            console.error("Error fetching messages:", error);
-        }
-    };
-
-    const createConversation = async (title) => {
-        try {
-            const response = await axios.post(`${config.API_URL}/conversations`, { title });
-            setConversations([...conversations, response.data]);
-            setCurrentConversation(response.data);
-            return response.data;
-        } catch (error) {
-            console.error("Error creating conversation:", error);
-        }
+    const generateRandomId = () => {
+        return Math.random().toString(36).substr(2, 9);
     };
 
     const handleSend = async () => {
         if (input.trim()) {
+            let convId = currentConversation?.id;
             if (!currentConversation) {
-                const newConversation = await createConversation('New Conversation');
-                setCurrentConversation(newConversation);
+                const newConversation = await createConversation(userId, 'New Conversation');
+                if (newConversation && newConversation.id) {
+                    setCurrentConversation(newConversation);
+                    convId = newConversation.id;
+                }
             }
+            if (convId) {
+                const newMessage = await sendMessage(userId, convId, input);
+                setMessages([...messages, newMessage]);
+                setInput('');
+                setLoading(true);
 
-            const userMessage = { content: input, sender: 'Você' };
-            setMessages([...messages, userMessage]);
-            setInput('');
-            setLoading(true);
+                let aiMessage = { id: generateRandomId(), content: '', sender: 'Cora', timestamp: Date.now() };
+                setMessages((prevMessages) => [...prevMessages, aiMessage]);
+                localStorage.setItem(`messages_${convId}`, JSON.stringify([...messages, aiMessage]));
 
-            let aiMessage = { content: '', sender: 'Cora' };
-            setMessages((prevMessages) => [...prevMessages, aiMessage]);
+                try {
+                    const aiResponse = await generateAIResponse(input);
+                    aiMessage.content = aiResponse;
 
-            try {
-                const response = await axios.post(`${config.CHAT_SERVICE_URL}/api/generate`, {
-                    model: 'llama3',
-                    prompt: input,
-                }, { responseType: 'stream' });
+                    const updatedAiMessage = await addAiMessage(userId, convId, aiMessage);
 
-                if (response.status !== 200) {
-                    throw new Error('Network response was not ok');
-                }
+                    setMessages((prevMessages) => {
+                        const updatedMessages = [...prevMessages];
+                        updatedMessages[updatedMessages.length - 1] = { ...updatedAiMessage };
+                        updatedMessages.sort((a, b) => a.timestamp - b.timestamp);
+                        localStorage.setItem(`messages_${convId}`, JSON.stringify(updatedMessages));
+                        return updatedMessages;
+                    });
 
-                const reader = response.data.getReader();
-                const decoder = new TextDecoder();
-                let done = false;
-
-                while (!done) {
-                    const { value, done: doneReading } = await reader.read();
-                    done = doneReading;
-                    const chunkValue = decoder.decode(value, { stream: true });
-
-                    const lines = chunkValue.split('\n').filter(Boolean);
-                    for (const line of lines) {
-                        const parsed = JSON.parse(line);
-                        const palavra = parsed.response;
-                        aiMessage.content += palavra;
-                        setMessages((prevMessages) => {
-                            const updatedMessages = [...prevMessages];
-                            updatedMessages[updatedMessages.length - 1] = { ...aiMessage };
-                            return updatedMessages;
-                        });
-
-                        if (parsed.done) {
-                            setLoading(false);
-                            setApiUnavailable(false);
-                            break;
-                        }
-                    }
-                }
-            } catch (error) {
-                console.error('Failed to fetch response from API:', error);
-                if (error.name !== 'AbortError') {
-                    setMessages((prevMessages) => [...prevMessages.slice(0, -1), { content: errorMessages[Math.floor(Math.random() * errorMessages.length)], sender: 'Cora' }]);
+                    setLoading(false);
+                    setApiUnavailable(false);
+                } catch (error) {
+                    console.error('Failed to fetch response from API:', error);
+                    aiMessage.content = errorMessages[Math.floor(Math.random() * errorMessages.length)];
+                    setMessages((prevMessages) => {
+                        const updatedMessages = [...prevMessages.slice(0, -1), aiMessage];
+                        updatedMessages.sort((a, b) => a.timestamp - b.timestamp);
+                        localStorage.setItem(`messages_${convId}`, JSON.stringify(updatedMessages));
+                        return updatedMessages;
+                    });
                     setApiUnavailable(true);
                     setRetryEnabled(true);
                     setRetryCountdown(10); // 10 segundos
+                    setLoading(false);
                 }
-                setLoading(false);
             }
         }
     };
@@ -182,9 +152,9 @@ const ChatSection = () => {
         setMenuOpen(false);
     };
 
-    const clearChat = async () => {
+    const clearChatHandler = async () => {
         if (currentConversation) {
-            await axios.delete(`${config.API_URL}/conversations/${currentConversation.id}`);
+            await clearChat(userId, currentConversation.id);
             setConversations(conversations.filter(convo => convo.id !== currentConversation.id));
             setCurrentConversation(conversations[0] || null);
         }
@@ -200,7 +170,7 @@ const ChatSection = () => {
             <SideNav
                 open={menuOpen}
                 handleMenuClose={handleMenuClose}
-                clearChat={clearChat}
+                clearChat={clearChatHandler}
                 handleImageUpload={handleImageUpload}
                 conversations={conversations}
                 selectConversation={selectConversation}

@@ -1,3 +1,5 @@
+// frontend/src/components/cora-chat/messages.js
+
 export const errorMessages = [
     "Desculpe, estou tendo um pequeno curto-circuito mental agora. Preciso de alguns minutos para meditar e recalibrar meus circuitos. Be right back, humano! 🤖✨",
     "Algo deu errado em minha lógica. Vou precisar de um momento para resolver isso. Volto logo! 🛠️",

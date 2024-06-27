@@ -53,7 +53,9 @@ function App() {
                         conversations={[]}
                         selectConversation={() => { }}
                     />
-                    <ChatSection />
+                    <ChatSection
+                        userId={user.uid}
+                    />
                 </div>
             ) : (
                 <div className="AuthContainer">
