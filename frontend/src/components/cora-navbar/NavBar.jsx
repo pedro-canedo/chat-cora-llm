@@ -22,7 +22,6 @@ const NavBar = ({ handleMenuOpen, currentConversationTitle }) => {
                 <IconButton color="inherit" aria-label="toggle dark mode" onClick={toggleTheme}>
                     {theme.palette.mode === 'dark' ? <Brightness7Icon /> : <Brightness4Icon />}
                 </IconButton>
-                <Typography variant="h6">+</Typography>
             </Toolbar>
         </AppBar>
     );
