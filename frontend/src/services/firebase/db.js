@@ -1,5 +1,5 @@
 // frontend/src/services/firebase/db.js
-import { ref, set, push, onValue, remove, serverTimestamp } from 'firebase/database';
+import { ref, set, push, onValue, remove } from 'firebase/database';
 import { db } from '../../firebaseConfig';
 
 // Função para buscar conversas de um usuário específico
@@ -43,9 +43,14 @@ export const syncMessagesWithDatabase = async (userId, conversationId) => {
     }
 };
 
-// Função para criar uma nova conversa
-export const createConversation = async (userId, title) => {
+// Função para criar uma nova conversa com base na primeira mensagem
+export const createConversation = async (userId, firstMessage) => {
+    if (!firstMessage.trim()) {
+        console.error("Cannot create conversation with empty first message");
+        return null;
+    }
     try {
+        const title = firstMessage.split(' ').slice(0, 5).join(' ');
         const newConversationRef = push(ref(db, `users/${userId}/conversations`));
         const newConversation = { id: newConversationRef.key, title };
         await set(newConversationRef, newConversation);
@@ -57,7 +62,11 @@ export const createConversation = async (userId, title) => {
 
 // Função para enviar uma mensagem
 export const sendMessage = async (userId, conversationId, messageContent) => {
-    const userMessage = { content: messageContent, sender: 'Você', timestamp: Date.now() };
+    const userMessage = { content: messageContent.trim(), sender: 'Você', timestamp: Date.now() };
+    if (!userMessage.content) {
+        console.error("Error adding user message: No content provided");
+        return null;
+    }
     try {
         const newMessageRef = push(ref(db, `users/${userId}/conversations/${conversationId}/messages`));
         await set(newMessageRef, userMessage);
@@ -69,7 +78,12 @@ export const sendMessage = async (userId, conversationId, messageContent) => {
 
 // Função para adicionar uma mensagem da IA
 export const addAiMessage = async (userId, conversationId, aiMessage) => {
+    aiMessage.content = aiMessage.content.trim();
     aiMessage.timestamp = Date.now();
+    if (!aiMessage.content) {
+        console.error("Error adding AI message: No content provided");
+        return null;
+    }
     try {
         const newMessageRef = push(ref(db, `users/${userId}/conversations/${conversationId}/messages`));
         aiMessage.id = newMessageRef.key;
@@ -82,6 +96,17 @@ export const addAiMessage = async (userId, conversationId, aiMessage) => {
 
 // Função para limpar uma conversa
 export const clearChat = async (userId, conversationId) => {
+    try {
+        const convoRef = ref(db, `users/${userId}/conversations/${conversationId}`);
+        await remove(convoRef);
+        localStorage.removeItem(`messages_${conversationId}`);
+    } catch (error) {
+        console.error("Error deleting conversation:", error);
+    }
+};
+
+// Função para excluir uma conversa específica
+export const deleteConversation = async (userId, conversationId) => {
     try {
         const convoRef = ref(db, `users/${userId}/conversations/${conversationId}`);
         await remove(convoRef);

@@ -75,8 +75,9 @@ const ChatSection = ({ userId }) => {
         if (input.trim()) {
             let convId = currentConversation?.id;
             if (!currentConversation) {
-                const newConversation = await createConversation(userId, 'New Conversation');
+                const newConversation = await createConversation(userId, input);
                 if (newConversation && newConversation.id) {
+                    setMessages([]); // Limpar mensagens locais ao criar uma nova conversa
                     setCurrentConversation(newConversation);
                     convId = newConversation.id;
                 }
@@ -109,16 +110,11 @@ const ChatSection = ({ userId }) => {
                     setApiUnavailable(false);
                 } catch (error) {
                     console.error('Failed to fetch response from API:', error);
-                    aiMessage.content = errorMessages[Math.floor(Math.random() * errorMessages.length)];
-                    setMessages((prevMessages) => {
-                        const updatedMessages = [...prevMessages.slice(0, -1), aiMessage];
-                        updatedMessages.sort((a, b) => a.timestamp - b.timestamp);
-                        localStorage.setItem(`messages_${convId}`, JSON.stringify(updatedMessages));
-                        return updatedMessages;
-                    });
+                    setMessages((prevMessages) => [...prevMessages.slice(0, -1), { content: errorMessages[Math.floor(Math.random() * errorMessages.length)], sender: 'Cora', id: generateRandomId(), timestamp: Date.now() }]);
                     setApiUnavailable(true);
                     setRetryEnabled(true);
-                    setRetryCountdown(10); // 10 segundos
+                    setRetryCountdown(10);
+                    localStorage.setItem(`messages_${convId}`, JSON.stringify([...messages.slice(0, -1), { content: errorMessages[Math.floor(Math.random() * errorMessages.length)], sender: 'Cora', id: generateRandomId(), timestamp: Date.now() }]));
                     setLoading(false);
                 }
             }
@@ -157,10 +153,15 @@ const ChatSection = ({ userId }) => {
             await clearChat(userId, currentConversation.id);
             setConversations(conversations.filter(convo => convo.id !== currentConversation.id));
             setCurrentConversation(conversations[0] || null);
+            setMessages([]); // Limpar mensagens locais ao excluir uma conversa
         }
     };
 
     const selectConversation = (conversation) => {
+        //se o valor for igual a nulo, limpa as mensagens
+        if (!conversation) {
+            setMessages([]);
+        }
         setCurrentConversation(conversation);
     };
 
@@ -174,6 +175,7 @@ const ChatSection = ({ userId }) => {
                 handleImageUpload={handleImageUpload}
                 conversations={conversations}
                 selectConversation={selectConversation}
+                userId={userId} // Passa userId para o SideNav
             />
             <Box
                 flex={1}
