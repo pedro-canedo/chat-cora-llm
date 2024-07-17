@@ -1,7 +1,9 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 import aiohttp
 import logging
 import os
+from pydantic import BaseModel
+from typing import Optional
 
 app = FastAPI()
 
@@ -9,12 +11,11 @@ app = FastAPI()
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Configuration
+# Default configuration
 MODEL_URL = os.getenv("MODEL_URL", "http://ollama:11434/api/generate")
 MODEL_NAME = os.getenv("MODEL_NAME", "llama3")
 HEADERS = {"Content-Type": "application/json"}
 
-# Default payload options
 DEFAULT_OPTIONS = {
     "num_keep": 5,
     "seed": 42,
@@ -45,6 +46,38 @@ DEFAULT_OPTIONS = {
     "num_thread": 8
 }
 
+options = DEFAULT_OPTIONS.copy()
+
+
+class ModelOptions(BaseModel):
+    num_keep: Optional[int] = None
+    seed: Optional[int] = None
+    num_predict: Optional[int] = None
+    top_k: Optional[int] = None
+    top_p: Optional[float] = None
+    tfs_z: Optional[float] = None
+    typical_p: Optional[float] = None
+    repeat_last_n: Optional[int] = None
+    temperature: Optional[float] = None
+    repeat_penalty: Optional[float] = None
+    presence_penalty: Optional[float] = None
+    frequency_penalty: Optional[float] = None
+    mirostat: Optional[int] = None
+    mirostat_tau: Optional[float] = None
+    mirostat_eta: Optional[float] = None
+    penalize_newline: Optional[bool] = None
+    numa: Optional[bool] = None
+    num_ctx: Optional[int] = None
+    num_batch: Optional[int] = None
+    num_gpu: Optional[int] = None
+    main_gpu: Optional[int] = None
+    low_vram: Optional[bool] = None
+    f16_kv: Optional[bool] = None
+    vocab_only: Optional[bool] = None
+    use_mmap: Optional[bool] = None
+    use_mlock: Optional[bool] = None
+    num_thread: Optional[int] = None
+
 
 @app.get("/")
 async def read_root():
@@ -52,12 +85,13 @@ async def read_root():
 
 
 @app.post("/generate")
-async def generate_text(prompt: str):
+async def generate_text(request: Request, prompt: str):
+    global options
     payload = {
         "model": MODEL_NAME,
         "prompt": prompt,
-        "stream": False,
-        "options": DEFAULT_OPTIONS
+        "stream": True,
+        "options": options
     }
 
     try:
@@ -68,7 +102,11 @@ async def generate_text(prompt: str):
                         f"Error communicating with model API: {response.status} - {response.reason}")
                     raise HTTPException(
                         status_code=500, detail=f"Error communicating with model API: {response.status} - {response.reason}")
-                return await response.json()
+
+                async def stream_response():
+                    async for line in response.content:
+                        yield line
+                return stream_response()
     except aiohttp.ClientError as e:
         logger.error(f"Network error: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Network error: {str(e)}")
@@ -76,6 +114,16 @@ async def generate_text(prompt: str):
         logger.error(f"Unexpected error: {str(e)}")
         raise HTTPException(
             status_code=500, detail=f"Unexpected error: {str(e)}")
+
+
+@app.post("/set_options")
+async def set_options(new_options: ModelOptions):
+    global options
+    for key, value in new_options.dict(exclude_unset=True).items():
+        options[key] = value
+    logger.info(f"Options updated: {options}")
+    return {"message": "Options updated", "options": options}
+
 
 if __name__ == "__main__":
     import uvicorn
