@@ -3,11 +3,11 @@ version: "3.3"
 services:
   ollama:
     image: ollama/ollama
+    container_name: ollama
     volumes:
       - ollama:/root/.ollama
     ports:
       - "11434:11434"
-    entrypoint: ["/bin/sh", "-c", "ollama run llama3 && tail -f /dev/null"]
 
   fastapi:
     build: .
@@ -17,7 +17,6 @@ services:
       - MODEL_URL=http://ollama:11434/api/generate
     depends_on:
       - ollama
-
 
 volumes:
   ollama:
