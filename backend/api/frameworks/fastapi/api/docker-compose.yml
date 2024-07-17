@@ -18,18 +18,6 @@ services:
     depends_on:
       - ollama
 
-  starter_model:
-    build: .
-    command: ["./scripts/pull_llama3_model.sh"]
-    depends_on:
-      - ollama
-
-  #mata o starter apos ele baixar o modelo
-  # killer:
-  #   build: .
-  #   command: ["./scripts/kill_starter.sh"]
-  #   depends_on:
-  #     - starter_model
 
 volumes:
   ollama:
