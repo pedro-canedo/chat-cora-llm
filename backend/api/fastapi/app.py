@@ -95,34 +95,26 @@ async def generate_text(request: Request, prompt: str):
         "options": options
     }
 
-    try:
-        async with aiohttp.ClientSession() as session:
-            async with session.post(MODEL_URL, json=payload, headers=HEADERS) as response:
-                if response.status != 200:
-                    logger.error(
-                        f"Error communicating with model API: {response.status} - {response.reason}")
-                    raise HTTPException(
-                        status_code=500, detail=f"Error communicating with model API: {response.status} - {response.reason}")
+    async def stream_response():
+        try:
+            async with aiohttp.ClientSession() as session:
+                async with session.post(MODEL_URL, json=payload, headers=HEADERS) as response:
+                    if response.status != 200:
+                        logger.error(
+                            f"Error communicating with model API: {response.status} - {response.reason}")
+                        raise HTTPException(
+                            status_code=500, detail=f"Error communicating with model API: {response.status} - {response.reason}")
 
-                async def stream_response():
-                    try:
-                        async for line in response.content:
-                            yield line.decode('utf-8')
-                    except aiohttp.ClientConnectionError as e:
-                        logger.error(f"Client connection error: {str(e)}")
-                        yield "Connection closed by server\n"
-                    except Exception as e:
-                        logger.error(f"Unexpected error: {str(e)}")
-                        yield "An unexpected error occurred\n"
+                    async for line in response.content:
+                        yield line.decode('utf-8')
+        except aiohttp.ClientConnectionError as e:
+            logger.error(f"Client connection error: {str(e)}")
+            yield "Connection closed by server\n"
+        except Exception as e:
+            logger.error(f"Unexpected error: {str(e)}")
+            yield "An unexpected error occurred\n"
 
-                return StreamingResponse(stream_response(), media_type="text/event-stream")
-    except aiohttp.ClientError as e:
-        logger.error(f"Network error: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Network error: {str(e)}")
-    except Exception as e:
-        logger.error(f"Unexpected error: {str(e)}")
-        raise HTTPException(
-            status_code=500, detail=f"Unexpected error: {str(e)}")
+    return StreamingResponse(stream_response(), media_type="text/event-stream")
 
 
 @app.post("/set_options")
