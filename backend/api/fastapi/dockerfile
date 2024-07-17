@@ -18,7 +18,7 @@ RUN python3 -m venv $VIRTUAL_ENV
 ENV PATH="$VIRTUAL_ENV/bin:$PATH"
 
 # Install Python dependencies in the virtual environment
-RUN pip install fastapi uvicorn requests
+RUN pip install fastapi uvicorn requests aiohttp
 
 # Set working directory
 WORKDIR /app
@@ -31,14 +31,14 @@ EXPOSE 11434 8000
 
 # Create a startup script
 RUN echo '#!/bin/bash\n\
-    ollama serve &\n\
-    for i in {1..10}; do\n\
+ollama serve &\n\
+for i in {1..10}; do\n\
     curl http://localhost:11434/api/status && break\n\
     echo "Waiting for Ollama to start..."\n\
     sleep 5\n\
-    done\n\
-    ollama pull phi\n\
-    uvicorn app:app --host 0.0.0.0 --port 8000' > /app/start.sh && \
+done\n\
+ollama pull phi\n\
+uvicorn app:app --host 0.0.0.0 --port 8000' > /app/start.sh && \
     chmod +x /app/start.sh
 
 # Set the startup script as the entry point
