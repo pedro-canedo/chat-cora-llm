@@ -34,7 +34,7 @@ async def read_root():
 
 
 @router.post("/generate")
-async def generate_text(request: Request, prompt: str):
+async def generate_text(prompt: str):
     global OPTIONS
     payload = {
         "model": MODEL_NAME,
