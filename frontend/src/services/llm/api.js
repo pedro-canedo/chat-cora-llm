@@ -41,3 +41,21 @@ export const generateAIResponse = async (input) => {
         throw error;
     }
 };
+
+export const checkServiceStatus = async () => {
+    try {
+        const response = await axios.get(config.CHAT_SERVICE_URL, {
+            headers: {
+                accept: 'application/json',
+            },
+        });
+
+        if (response.status !== 200) {
+            throw new Error('Network response was not ok');
+        }
+        return response.data['is ready'] == true ? true : false;
+    } catch (error) {
+        console.error('Failed to fetch response from API:', error);
+        throw error;
+    }
+}

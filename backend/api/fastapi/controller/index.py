@@ -1,47 +1,29 @@
-from fastapi import FastAPI, HTTPException, Request
+from logging import Logger
+from models.index import ModelOptions
+from settings.constants import HEADERS, MODEL_NAME, MODEL_URL, OPTIONS
+from fastapi import APIRouter, Query, WebSocket, Depends, HTTPException, Request
+from fastapi import APIRouter, FastAPI
 import aiohttp
-import logging
-import os
-from pydantic import BaseModel
-from typing import Optional
 from fastapi.responses import StreamingResponse
 
-app = FastAPI()
 
-# Configure logging
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
-
-# Default configuration
-MODEL_URL = os.getenv("MODEL_URL", "http://ollama:11434/api/generate")
-MODEL_NAME = os.getenv("MODEL_NAME", "llama3")
-HEADERS = {"Content-Type": "application/json"}
-
-DEFAULT_OPTIONS = {
-
-    "temperature": 0.5,
-}
-
-options = DEFAULT_OPTIONS.copy()
+router = APIRouter()
+logger = Logger('CONTROLLER')
 
 
-class ModelOptions(BaseModel):
-    temperature: Optional[float] = None
-
-
-@app.get("/")
+@router.get("/")
 async def read_root():
-    return {"message": "Api is Running", "model": MODEL_NAME, "options": options, "is ready": True}
+    return {"message": "Api is Running", "model": MODEL_NAME, "options": OPTIONS, "is ready": True}
 
 
-@app.post("/generate")
+@router.post("/generate")
 async def generate_text(request: Request, prompt: str):
-    global options
+    global OPTIONS
     payload = {
         "model": MODEL_NAME,
         "prompt": prompt,
         "stream": True,
-        "options": options
+        "options": OPTIONS
     }
 
     async def stream_response():
@@ -66,14 +48,10 @@ async def generate_text(request: Request, prompt: str):
     return StreamingResponse(stream_response(), media_type="text/event-stream")
 
 
-@app.post("/set_options")
+@router.post("/set_options")
 async def set_options(new_options: ModelOptions):
     global options
     for key, value in new_options.dict(exclude_unset=True).items():
         options[key] = value
     logger.info(f"Options updated: {options}")
     return {"message": "Options updated", "options": options}
-
-if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)

@@ -2,3 +2,6 @@ fastapi
 uvicorn
 requests
 aiohttp
+pytz==2023.3.post1
+colorlog==6.7.0
+python-dotenv==1.0.0

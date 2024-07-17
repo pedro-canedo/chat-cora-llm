@@ -7,7 +7,7 @@ import SideNav from '../cora-sidebar/SideNav';
 import SendIcon from '@mui/icons-material/Send';
 import StopIcon from '@mui/icons-material/Stop';
 import NavBar from '../cora-navbar/NavBar';
-import { generateAIResponse, generateTileFromText } from '../../services/gemini/api';
+import { requestChatApi, generateTileFromText } from '../../use-cases/requestChatApi';
 
 const ChatSection = ({ userId }) => {
     const theme = useTheme();
@@ -102,7 +102,7 @@ const ChatSection = ({ userId }) => {
             localStorage.setItem(`messages_${convId}`, JSON.stringify([...messages, aiMessage]));
 
             try {
-                const aiResponse = await generateAIResponse(input);
+                const aiResponse = await requestChatApi(input);
                 aiMessage.content = aiResponse;
 
                 const updatedAiMessage = await addAiMessage(userId, convId, aiMessage);
