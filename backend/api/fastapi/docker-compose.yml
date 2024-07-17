@@ -2,7 +2,7 @@ version: "3.3"
 
 services:
   ollama:
-    image: ollama/ollama
+    image: ollama/llama3
     volumes:
       - ollama:/root/.ollama
     ports:
