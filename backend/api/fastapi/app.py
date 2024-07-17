@@ -10,7 +10,7 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # Configuration
-MODEL_URL = os.getenv("MODEL_URL", "http://localhost:11434/api/generate")
+MODEL_URL = os.getenv("MODEL_URL", "http://ollama:11434/api/generate")
 MODEL_NAME = os.getenv("MODEL_NAME", "llama3")
 HEADERS = {"Content-Type": "application/json"}
 
@@ -67,7 +67,7 @@ async def generate_text(prompt: str):
                     logger.error(
                         f"Error communicating with model API: {response.status} - {response.reason}")
                     raise HTTPException(
-                        status_code=500, detail="Error communicating with model API")
+                        status_code=500, detail=f"Error communicating with model API: {response.status} - {response.reason}")
                 return await response.json()
     except aiohttp.ClientError as e:
         logger.error(f"Network error: {str(e)}")

@@ -9,9 +9,6 @@ RUN apt-get update && apt-get install -y \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Ollama
-RUN set -e; curl https://ollama.com/install.sh | sh
-
 # Set up a virtual environment
 ENV VIRTUAL_ENV=/opt/venv
 RUN python3 -m venv $VIRTUAL_ENV
@@ -26,18 +23,11 @@ WORKDIR /app
 # Copy Python script
 COPY app.py .
 
-# Expose Ollama port and FastAPI port
-EXPOSE 11434 8000
+# Expose FastAPI port
+EXPOSE 8000
 
 # Create a startup script
 RUN echo '#!/bin/bash\n\
-    ollama serve &\n\
-    for i in {1..10}; do\n\
-    curl http://localhost:11434/api/status && break\n\
-    echo "Waiting for Ollama to start..."\n\
-    sleep 5\n\
-    done\n\
-    ollama pull phi\n\
     uvicorn app:app --host 0.0.0.0 --port 8000' > /app/start.sh && \
     chmod +x /app/start.sh
 
