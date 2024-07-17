@@ -1,6 +1,6 @@
 
 
-from api.router.index import Routes
+from router.index import Routes
 
 
 app = Routes().starting()

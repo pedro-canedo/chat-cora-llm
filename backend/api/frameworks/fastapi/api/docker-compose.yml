@@ -8,7 +8,6 @@ services:
     ports:
       - "11434:11434"
 
-
   fastapi:
     build: .
     ports:
@@ -18,5 +17,16 @@ services:
     depends_on:
       - ollama
 
+  starter_model:
+    build: .
+    command: ["./scripts/pull_llama3_model.sh"]
+    depends_on:
+      - ollama
+
+  killer:
+    build: .
+    command: ["./scripts/kill_starter_model.sh"]
+    depends_on:
+      - starter_model
 volumes:
   ollama:
