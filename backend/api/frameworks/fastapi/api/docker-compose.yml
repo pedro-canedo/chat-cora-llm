@@ -7,6 +7,7 @@ services:
       - ollama:/root/.ollama
     ports:
       - "11434:11434"
+    entrypoint: ["/bin/sh", "-c", "ollama run llama3 && tail -f /dev/null"]
 
   fastapi:
     build: .
@@ -28,5 +29,6 @@ services:
     command: ["./scripts/kill_starter_model.sh"]
     depends_on:
       - starter_model
+
 volumes:
   ollama:
