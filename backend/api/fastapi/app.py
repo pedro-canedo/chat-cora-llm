@@ -31,7 +31,7 @@ class ModelOptions(BaseModel):
 
 @app.get("/")
 async def read_root():
-    return {"message": "Bem-vindo à API LLM"}
+    return {"message": "Api is Running", "model": MODEL_NAME, "options": options, "is ready": True}
 
 
 @app.post("/generate")

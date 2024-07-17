@@ -4,8 +4,8 @@ import config from '../../config';
 
 export const generateAIResponse = async (input) => {
     try {
-        const response = await axios.post(`${config.CHAT_SERVICE_URL}/api/generate`, {
-            model: 'llama3',
+        const response = await axios.post(`${config.CHAT_SERVICE_URL}/generate`, {
+            // model: 'llama3',
             prompt: input,
         }, { responseType: 'stream' });
 
