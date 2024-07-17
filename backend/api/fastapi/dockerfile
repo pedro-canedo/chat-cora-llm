@@ -14,11 +14,12 @@ ENV VIRTUAL_ENV=/opt/venv
 RUN python3 -m venv $VIRTUAL_ENV
 ENV PATH="$VIRTUAL_ENV/bin:$PATH"
 
-# Install Python dependencies in the virtual environment
-RUN pip install fastapi uvicorn requests aiohttp
-
 # Set working directory
 WORKDIR /app
+
+# Copy requirements file and install dependencies
+COPY requirements.txt .
+RUN pip install -r requirements.txt
 
 # Copy Python script
 COPY app.py .
@@ -28,7 +29,7 @@ EXPOSE 8000
 
 # Create a startup script
 RUN echo '#!/bin/bash\n\
-    uvicorn app:app --host 0.0.0.0 --port 8000' > /app/start.sh && \
+uvicorn app:app --host 0.0.0.0 --port 8000' > /app/start.sh && \
     chmod +x /app/start.sh
 
 # Set the startup script as the entry point

@@ -4,6 +4,7 @@ import logging
 import os
 from pydantic import BaseModel
 from typing import Optional
+from fastapi.responses import StreamingResponse
 
 app = FastAPI()
 
@@ -105,8 +106,9 @@ async def generate_text(request: Request, prompt: str):
 
                 async def stream_response():
                     async for line in response.content:
-                        yield line
-                return stream_response()
+                        yield line.decode('utf-8')
+
+                return StreamingResponse(stream_response(), media_type="text/event-stream")
     except aiohttp.ClientError as e:
         logger.error(f"Network error: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Network error: {str(e)}")
@@ -123,7 +125,6 @@ async def set_options(new_options: ModelOptions):
         options[key] = value
     logger.info(f"Options updated: {options}")
     return {"message": "Options updated", "options": options}
-
 
 if __name__ == "__main__":
     import uvicorn
