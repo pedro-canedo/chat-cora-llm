@@ -13,6 +13,23 @@ logger = Logger('CONTROLLER')
 
 @router.get("/")
 async def read_root():
+    # check if model is ready
+    try:
+        async with aiohttp.ClientSession() as session:
+            async with session.get(MODEL_URL, headers=HEADERS) as response:
+                if response.status != 200:
+                    logger.error(
+                        f"Error communicating with model API: {response.status} - {response.reason}")
+                    raise HTTPException(
+                        status_code=500, detail=f"Error communicating with model API: {response.status} - {response.reason}")
+    except aiohttp.ClientConnectionError as e:
+        logger.error(f"Client connection error: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail=f"Client connection error: {str(e)}")
+    except Exception as e:
+        logger.error(f"Unexpected error: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail=f"Unexpected error: {str (e)}")
     return {"message": "Api is Running", "model": MODEL_NAME, "options": OPTIONS, "is ready": True}
 
 
