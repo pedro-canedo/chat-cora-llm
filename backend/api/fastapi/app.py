@@ -105,8 +105,15 @@ async def generate_text(request: Request, prompt: str):
                         status_code=500, detail=f"Error communicating with model API: {response.status} - {response.reason}")
 
                 async def stream_response():
-                    async for line in response.content:
-                        yield line.decode('utf-8')
+                    try:
+                        async for line in response.content:
+                            yield line.decode('utf-8')
+                    except aiohttp.ClientConnectionError as e:
+                        logger.error(f"Client connection error: {str(e)}")
+                        yield "Connection closed by server\n"
+                    except Exception as e:
+                        logger.error(f"Unexpected error: {str(e)}")
+                        yield "An unexpected error occurred\n"
 
                 return StreamingResponse(stream_response(), media_type="text/event-stream")
     except aiohttp.ClientError as e:
