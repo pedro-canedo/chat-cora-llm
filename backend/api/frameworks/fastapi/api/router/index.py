@@ -2,8 +2,8 @@
 
 from logging import Logger
 
-from server.index import Api
-from controller.index import router
+from api.server.index import Api
+from api.controller.index import router
 
 
 logger = Logger('ROUTES')

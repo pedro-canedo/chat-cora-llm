@@ -1,6 +1,6 @@
 
 
-from middleware.index import MiddlewareApi
+from api.middleware.index import MiddlewareApi
 from fastapi import FastAPI, HTTPException, Request
 from dotenv import load_dotenv
 
