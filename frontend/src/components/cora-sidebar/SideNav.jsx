@@ -13,7 +13,6 @@ const SideNav = ({ open, handleMenuClose, clearChat, handleImageUpload, conversa
         signOut(auth).then(() => {
             localStorage.removeItem('messages');
             localStorage.removeItem('userImage');
-            console.log('Logout successful');
             window.location.reload();
         }).catch(error => {
             console.error("Error signing out: ", error);
@@ -22,7 +21,6 @@ const SideNav = ({ open, handleMenuClose, clearChat, handleImageUpload, conversa
 
     const handleDeleteConversation = async (conversationId) => {
         await deleteConversation(userId, conversationId);
-        //limpar a conversa
         clearChat();
         handleMenuClose();
     };
@@ -39,7 +37,7 @@ const SideNav = ({ open, handleMenuClose, clearChat, handleImageUpload, conversa
                     <CloseIcon />
                 </IconButton>
                 <Button fullWidth variant="contained" color="primary" style={{ margin: '10px 0' }} onClick={handleNewChat}>
-                    + New Chat
+                    + Nova Conversa
                 </Button>
                 <List>
                     {conversations.map(convo => (
@@ -60,11 +58,8 @@ const SideNav = ({ open, handleMenuClose, clearChat, handleImageUpload, conversa
                         <ListItemText primary="Adicione sua Foto" />
                         <input type="file" hidden onChange={handleImageUpload} />
                     </ListItem>
-                    <ListItem button>
-                        <ListItemText primary="Update & FAQs" />
-                    </ListItem>
                     <ListItem button onClick={handleLogout}>
-                        <ListItemText primary="Log out" />
+                        <ListItemText primary="Sair" />
                     </ListItem>
                 </List>
             </div>

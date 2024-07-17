@@ -1,13 +1,13 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Box, TextField, Paper, Grid, useMediaQuery, useTheme, IconButton, Typography, Tooltip, Button } from '@mui/material';
 import { fetchUserConversations, fetchMessagesFromDatabase, syncMessagesWithDatabase, createConversation, sendMessage, addAiMessage, clearChat } from '../../services/firebase/db';
-import { generateAIResponse } from '../../services/llm/api';
 import { errorMessages } from './messages';
 import Message from './Message';
 import SideNav from '../cora-sidebar/SideNav';
 import SendIcon from '@mui/icons-material/Send';
 import StopIcon from '@mui/icons-material/Stop';
 import NavBar from '../cora-navbar/NavBar';
+import { generateAIResponse, generateTileFromText } from '../../services/gemini/api';
 
 const ChatSection = ({ userId }) => {
     const theme = useTheme();
@@ -26,6 +26,7 @@ const ChatSection = ({ userId }) => {
     const [menuOpen, setMenuOpen] = useState(false);
     const [apiUnavailable, setApiUnavailable] = useState(false);
     const controllerRef = useRef(null);
+
 
     useEffect(() => {
         fetchUserConversations(userId, setConversations);
@@ -51,7 +52,7 @@ const ChatSection = ({ userId }) => {
             if (currentConversation) {
                 syncMessagesWithDatabase(userId, currentConversation.id);
             }
-        }, 1000);
+        }, 60000); // 60 segundos
 
         return () => clearInterval(interval);
     }, [currentConversation, messages, userId]);
@@ -72,51 +73,59 @@ const ChatSection = ({ userId }) => {
     };
 
     const handleSend = async () => {
-        if (input.trim()) {
-            let convId = currentConversation?.id;
-            if (!currentConversation) {
-                const newConversation = await createConversation(userId, input);
-                if (newConversation && newConversation.id) {
-                    setMessages([]); // Limpar mensagens locais ao criar uma nova conversa
-                    setCurrentConversation(newConversation);
-                    convId = newConversation.id;
-                }
+        if (!input.trim()) {
+            console.error("Cannot send empty message");
+            return;
+        }
+
+        let convId = currentConversation?.id;
+        if (!currentConversation) {
+            const title = await generateTileFromText(input)
+            const newConversation = await createConversation(userId, input, title);
+
+            if (newConversation && newConversation.id) {
+                setMessages([]); // Limpar mensagens locais ao criar uma nova conversa
+                setCurrentConversation(newConversation);
+                convId = newConversation.id;
             }
-            if (convId) {
-                const newMessage = await sendMessage(userId, convId, input);
-                setMessages([...messages, newMessage]);
-                setInput('');
-                setLoading(true);
+        }
+        if (convId) {
+            const newMessage = await sendMessage(userId, convId, input);
+            if (!newMessage) return; // Se a mensagem não for válida, não prossiga
 
-                let aiMessage = { id: generateRandomId(), content: '', sender: 'Cora', timestamp: Date.now() };
-                setMessages((prevMessages) => [...prevMessages, aiMessage]);
-                localStorage.setItem(`messages_${convId}`, JSON.stringify([...messages, aiMessage]));
+            setMessages([...messages, newMessage]);
+            setInput('');
+            setLoading(true);
 
-                try {
-                    const aiResponse = await generateAIResponse(input);
-                    aiMessage.content = aiResponse;
+            let aiMessage = { id: generateRandomId(), content: '', sender: 'Cora', timestamp: Date.now() };
+            setMessages((prevMessages) => [...prevMessages, aiMessage]);
+            localStorage.setItem(`messages_${convId}`, JSON.stringify([...messages, aiMessage]));
 
-                    const updatedAiMessage = await addAiMessage(userId, convId, aiMessage);
+            try {
+                const aiResponse = await generateAIResponse(input);
+                aiMessage.content = aiResponse;
 
-                    setMessages((prevMessages) => {
-                        const updatedMessages = [...prevMessages];
-                        updatedMessages[updatedMessages.length - 1] = { ...updatedAiMessage };
-                        updatedMessages.sort((a, b) => a.timestamp - b.timestamp);
-                        localStorage.setItem(`messages_${convId}`, JSON.stringify(updatedMessages));
-                        return updatedMessages;
-                    });
+                const updatedAiMessage = await addAiMessage(userId, convId, aiMessage);
+                if (!updatedAiMessage) return; // Se a mensagem da IA não for válida, não prossiga
 
-                    setLoading(false);
-                    setApiUnavailable(false);
-                } catch (error) {
-                    console.error('Failed to fetch response from API:', error);
-                    setMessages((prevMessages) => [...prevMessages.slice(0, -1), { content: errorMessages[Math.floor(Math.random() * errorMessages.length)], sender: 'Cora', id: generateRandomId(), timestamp: Date.now() }]);
-                    setApiUnavailable(true);
-                    setRetryEnabled(true);
-                    setRetryCountdown(10);
-                    localStorage.setItem(`messages_${convId}`, JSON.stringify([...messages.slice(0, -1), { content: errorMessages[Math.floor(Math.random() * errorMessages.length)], sender: 'Cora', id: generateRandomId(), timestamp: Date.now() }]));
-                    setLoading(false);
-                }
+                setMessages((prevMessages) => {
+                    const updatedMessages = [...prevMessages];
+                    updatedMessages[updatedMessages.length - 1] = { ...updatedAiMessage };
+                    updatedMessages.sort((a, b) => a.timestamp - b.timestamp);
+                    localStorage.setItem(`messages_${convId}`, JSON.stringify(updatedMessages));
+                    return updatedMessages;
+                });
+
+                setLoading(false);
+                setApiUnavailable(false);
+            } catch (error) {
+                console.error('Failed to fetch response from API:', error);
+                setMessages((prevMessages) => [...prevMessages.slice(0, -1), { content: errorMessages[Math.floor(Math.random() * errorMessages.length)], sender: 'Cora', id: generateRandomId(), timestamp: Date.now() }]);
+                setApiUnavailable(true);
+                setRetryEnabled(true);
+                setRetryCountdown(10);
+                localStorage.setItem(`messages_${convId}`, JSON.stringify([...messages.slice(0, -1), { content: errorMessages[Math.floor(Math.random() * errorMessages.length)], sender: 'Cora', id: generateRandomId(), timestamp: Date.now() }]));
+                setLoading(false);
             }
         }
     };
@@ -158,16 +167,12 @@ const ChatSection = ({ userId }) => {
     };
 
     const selectConversation = (conversation) => {
-        //se o valor for igual a nulo, limpa as mensagens
-        if (!conversation) {
-            setMessages([]);
-        }
         setCurrentConversation(conversation);
     };
 
     return (
         <Box display="flex" flexDirection="column" height="100vh" width="100vw" pt={8}>
-            <NavBar handleMenuOpen={handleMenuOpen} currentConversationTitle={currentConversation ? currentConversation.title : 'No Conversation Selected'} />
+            <NavBar handleMenuOpen={handleMenuOpen} currentConversationTitle={currentConversation ? currentConversation.title : 'Nenhuma Conversa Selecionada'} />
             <SideNav
                 open={menuOpen}
                 handleMenuClose={handleMenuClose}
@@ -215,7 +220,7 @@ const ChatSection = ({ userId }) => {
                     <Grid item xs={isSmallScreen ? 8 : 10}>
                         <TextField
                             variant="outlined"
-                            placeholder="Type your message here..."
+                            placeholder="Digite sua mensagem aqui..."
                             fullWidth
                             multiline
                             minRows={1}

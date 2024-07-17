@@ -44,16 +44,16 @@ export const syncMessagesWithDatabase = async (userId, conversationId) => {
 };
 
 // Função para criar uma nova conversa com base na primeira mensagem
-export const createConversation = async (userId, firstMessage) => {
+export const createConversation = async (userId, firstMessage, title) => {
     if (!firstMessage.trim()) {
         console.error("Cannot create conversation with empty first message");
         return null;
     }
     try {
-        const title = firstMessage.split(' ').slice(0, 5).join(' ');
         const newConversationRef = push(ref(db, `users/${userId}/conversations`));
         const newConversation = { id: newConversationRef.key, title };
         await set(newConversationRef, newConversation);
+
         return newConversation;
     } catch (error) {
         console.error("Error creating conversation:", error);
