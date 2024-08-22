@@ -79,16 +79,17 @@ const ChatSection = ({ userId }) => {
             console.error("Cannot send empty message");
             return;
         }
-
-        const aiProvider = AIFactory();  // Gera o provedor de IA
+        const aiProvider = AIFactory();
 
         let convId = currentConversation?.id;
         if (!currentConversation) {
-            const title = await generateTileFromText(input);
+            const inputCopy = input;
+            setInput('');
+            const title = await generateTileFromText(inputCopy);
             const newConversation = await createConversation(userId, input, title);
 
             if (newConversation && newConversation.id) {
-                setMessages([]); // Limpar mensagens locais ao criar uma nova conversa
+                setMessages([]);
                 setCurrentConversation(newConversation);
                 convId = newConversation.id;
             }
@@ -96,9 +97,9 @@ const ChatSection = ({ userId }) => {
         if (convId) {
             const newMessage = await sendMessage(userId, convId, input);
             if (!newMessage) return; // Se a mensagem não for válida, não prossiga
+            setInput('');
 
             setMessages([...messages, newMessage]);
-            setInput('');
             setLoading(true);
 
             let aiMessage = { id: generateRandomId(), content: '', sender: 'Cora', timestamp: Date.now() };
@@ -133,6 +134,7 @@ const ChatSection = ({ userId }) => {
             }
         }
     };
+
 
 
     const handleStop = () => {
