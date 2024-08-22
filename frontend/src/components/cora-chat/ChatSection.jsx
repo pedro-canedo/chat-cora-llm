@@ -168,10 +168,11 @@ const ChatSection = ({ userId }) => {
         if (currentConversation) {
             await clearChat(userId, currentConversation.id);
             setConversations(conversations.filter(convo => convo.id !== currentConversation.id));
-            setCurrentConversation(conversations[0] || null);
-            setMessages([]); // Limpar mensagens locais ao excluir uma conversa
+            setCurrentConversation(null);
+            setMessages([]);
         }
     };
+
 
     const selectConversation = (conversation) => {
         setCurrentConversation(conversation);
@@ -187,7 +188,7 @@ const ChatSection = ({ userId }) => {
                 handleImageUpload={handleImageUpload}
                 conversations={conversations}
                 selectConversation={selectConversation}
-                userId={userId} // Passa userId para o SideNav
+                userId={userId}
             />
             <Box
                 flex={1}
