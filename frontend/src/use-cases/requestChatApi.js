@@ -1,16 +1,11 @@
-import { checkServiceStatus, generateAIResponse } from '../services/llm/api';
-import { generateAIResponseGemni } from '../services/gemini/api';
-
+import { AIFactory } from '../services/ai/AIFactory';
 
 export const requestChatApi = async (input) => {
-    if (await checkServiceStatus()) {
-        return generateAIResponse(input);
-    }
-    return generateAIResponseGemni(input);
-}
-
+    const aiProvider = AIFactory();
+    return aiProvider.generateResponse(input);
+};
 
 export const generateTileFromText = async (text) => {
-    const prompt = `Gere pra mim, um texto que seja o titulo da nossa conversa baseada no seguinte texto? inicio -> ${text} <- fim, preciso que tenha no máximo 2 palavras`;
+    const prompt = `Gere pra mim, um texto que seja o título da nossa conversa baseada no seguinte texto? início -> ${text} <- fim, preciso que tenha no máximo 2 palavras`;
     return requestChatApi(prompt);
-}
+};

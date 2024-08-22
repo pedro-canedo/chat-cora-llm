@@ -1,18 +1,23 @@
+//frontend/src/services/llm/api.js
 import axios from 'axios';
 import config from '../../config';
 
 export const generateAIResponse = async (input) => {
     try {
-        // debugger;
-        const response = await axios.post(`${config.CHAT_SERVICE_URL}/generate`, {
-            prompt: input,
-        }, { responseType: 'stream' });
+        const url = `${config.CHAT_SERVICE_URL}/generate?prompt=${encodeURIComponent(input)}`;
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'text/event-stream'
+            },
+        });
 
-        if (response.status !== 200) {
+        if (!response.ok) {
             throw new Error('Network response was not ok');
         }
 
-        const reader = response.data.getReader();
+        const reader = response.body.getReader();
         const decoder = new TextDecoder();
         let done = false;
         let aiResponse = '';
@@ -22,7 +27,17 @@ export const generateAIResponse = async (input) => {
             done = doneReading;
             if (value) {
                 const chunkValue = decoder.decode(value, { stream: true });
-                aiResponse += chunkValue;
+
+                const lines = chunkValue.split('\n').filter(Boolean);
+                for (const line of lines) {
+                    const parsed = JSON.parse(line);
+                    aiResponse += parsed.response;
+
+                    if (parsed.done) {
+                        done = true;
+                        break;
+                    }
+                }
             }
         }
 

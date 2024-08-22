@@ -8,6 +8,7 @@ import SendIcon from '@mui/icons-material/Send';
 import StopIcon from '@mui/icons-material/Stop';
 import NavBar from '../cora-navbar/NavBar';
 import { requestChatApi, generateTileFromText } from '../../use-cases/requestChatApi';
+import { AIFactory } from '../../services/ai/AIFactory';
 
 const ChatSection = ({ userId }) => {
     const theme = useTheme();
@@ -26,6 +27,7 @@ const ChatSection = ({ userId }) => {
     const [menuOpen, setMenuOpen] = useState(false);
     const [apiUnavailable, setApiUnavailable] = useState(false);
     const controllerRef = useRef(null);
+    const aiProvider = AIFactory();
 
 
     useEffect(() => {
@@ -78,9 +80,11 @@ const ChatSection = ({ userId }) => {
             return;
         }
 
+        const aiProvider = AIFactory();  // Gera o provedor de IA
+
         let convId = currentConversation?.id;
         if (!currentConversation) {
-            const title = await generateTileFromText(input)
+            const title = await generateTileFromText(input);
             const newConversation = await createConversation(userId, input, title);
 
             if (newConversation && newConversation.id) {
@@ -102,7 +106,7 @@ const ChatSection = ({ userId }) => {
             localStorage.setItem(`messages_${convId}`, JSON.stringify([...messages, aiMessage]));
 
             try {
-                const aiResponse = await requestChatApi(input);
+                const aiResponse = await aiProvider.generateResponse(input);
                 aiMessage.content = aiResponse;
 
                 const updatedAiMessage = await addAiMessage(userId, convId, aiMessage);
@@ -129,6 +133,7 @@ const ChatSection = ({ userId }) => {
             }
         }
     };
+
 
     const handleStop = () => {
         if (controllerRef.current) {
