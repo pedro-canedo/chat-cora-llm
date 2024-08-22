@@ -7,7 +7,7 @@ import { auth } from '../../firebaseConfig';
 import { signOut, deleteUser } from 'firebase/auth';
 import { deleteConversation } from '../../services/firebase/db';
 
-const SideNav = ({ open, handleMenuClose, clearChat, handleImageUpload, conversations = [], selectConversation, userId }) => {
+const SideNav = ({ open, handleMenuClose, clearChat, handleImageUpload, conversations = [], setMessages, selectConversation, userId }) => {
 
     const handleLogout = () => {
         signOut(auth).then(() => {
@@ -27,6 +27,7 @@ const SideNav = ({ open, handleMenuClose, clearChat, handleImageUpload, conversa
 
     const handleNewChat = () => {
         selectConversation(null);
+        setMessages([])
         handleMenuClose();
     };
 

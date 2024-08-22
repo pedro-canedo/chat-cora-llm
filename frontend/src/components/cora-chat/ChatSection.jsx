@@ -187,6 +187,7 @@ const ChatSection = ({ userId }) => {
                 clearChat={clearChatHandler}
                 handleImageUpload={handleImageUpload}
                 conversations={conversations}
+                setMessages={setMessages}
                 selectConversation={selectConversation}
                 userId={userId}
             />
