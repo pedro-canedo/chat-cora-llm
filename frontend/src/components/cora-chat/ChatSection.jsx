@@ -187,14 +187,20 @@ const ChatSection = ({ userId }) => {
     };
 
     const selectConversation = (conversation) => {
-        setCurrentConversation(conversation.title);
+        if (conversation && conversation.title) {
+            setCurrentConversation(conversation);
+        } else {
+            setCurrentConversation({ title: 'Nenhuma conversa selecionada' });
+        }
     };
+
 
     const handleTabChange = (event, newValue) => {
         setActiveTab(newValue);
 
         if (newValue === 1) {
             setCurrentConversation({ title: 'Bem-vindo ao chat da comunidade! Sinta-se à vontade para fazer perguntas e interagir com os outros membros.' });
+            setMessages([]);
         } else if (currentConversation && currentConversation.title.includes('chat da comunidade')) {
             setCurrentConversation(null);
         }
@@ -213,8 +219,8 @@ const ChatSection = ({ userId }) => {
                 setMessages={setMessages}
                 selectConversation={selectConversation}
                 userId={userId}
-                activeTab={activeTab} // Passe o estado da aba ativa
-                handleTabChange={handleTabChange} // Passe a função de troca de aba
+                activeTab={activeTab}
+                handleTabChange={handleTabChange}
             />
             {activeTab === 0 && (
                 <Box

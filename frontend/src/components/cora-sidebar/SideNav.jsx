@@ -4,7 +4,7 @@ import CloseIcon from '@mui/icons-material/Close';
 import DeleteIcon from '@mui/icons-material/Delete';
 import { auth } from '../../firebaseConfig';
 import { signOut } from 'firebase/auth';
-import { deleteConversation } from '../../services/firebase/db';
+import { deleteConversation, clearChat } from '../../services/firebase/db';
 
 const SideNav = ({ open, handleMenuClose, clearChat, handleImageUpload, conversations = [], setMessages, selectConversation, userId, activeTab, handleTabChange }) => {
 
@@ -19,9 +19,21 @@ const SideNav = ({ open, handleMenuClose, clearChat, handleImageUpload, conversa
     };
 
     const handleDeleteConversation = async (conversationId) => {
-        await deleteConversation(userId, conversationId);
-        clearChat();
-        handleMenuClose();
+        if (window.confirm("Tem certeza que deseja excluir esta conversa?")) {
+            await deleteConversation(userId, conversationId);
+            setMessages([]);  // Limpa as mensagens na UI
+            handleMenuClose();
+        }
+    };
+
+    const handleClearAllConversations = async () => {
+        if (window.confirm("Tem certeza que deseja limpar todas as conversas?")) {
+            for (const convo of conversations) {
+                await clearChat(userId, convo.id);
+            }
+            setMessages([]);  // Limpa as mensagens na UI
+            handleMenuClose();
+        }
     };
 
     const handleNewChat = () => {
@@ -63,7 +75,7 @@ const SideNav = ({ open, handleMenuClose, clearChat, handleImageUpload, conversa
 
                 <Divider />
                 <List>
-                    <ListItem button onClick={clearChat}>
+                    <ListItem button onClick={handleClearAllConversations}>
                         <ListItemText primary="Limpar todas Conversas" />
                     </ListItem>
                     <ListItem button component="label">
