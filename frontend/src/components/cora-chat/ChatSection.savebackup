@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Box, TextField, Paper, Grid, useMediaQuery, useTheme, IconButton, Typography, Tooltip } from '@mui/material';
+import { Box, TextField, Paper, Grid, useMediaQuery, useTheme, IconButton, Typography, Tooltip, Tabs, Tab } from '@mui/material';
 import { fetchUserConversations, fetchMessagesFromDatabase, syncMessagesWithDatabase, createConversation, sendMessage, addAiMessage, clearChat } from '../../services/firebase/db';
 import { errorMessages } from './messages';
 import Message from './Message';
@@ -9,7 +9,7 @@ import StopIcon from '@mui/icons-material/Stop';
 import NavBar from '../cora-navbar/NavBar';
 import { generateTileFromText } from '../../use-cases/requestChatApi';
 import { AIFactory } from '../../services/ai/AIFactory';
-import ChatOnline from '../chat-online/ChatOnline'; // Importe o novo componente de chat online
+import ChatOnline from '../chat-online/ChatOnline';
 
 const ChatSection = ({ userId }) => {
     const theme = useTheme();
@@ -27,7 +27,7 @@ const ChatSection = ({ userId }) => {
     });
     const [menuOpen, setMenuOpen] = useState(false);
     const [apiUnavailable, setApiUnavailable] = useState(false);
-    const [activeTab, setActiveTab] = useState(0); // Estado para gerenciar a aba ativa
+    const [activeTab, setActiveTab] = useState(0);
 
     const controllerRef = useRef(null);
     const aiProvider = AIFactory();
@@ -56,7 +56,7 @@ const ChatSection = ({ userId }) => {
             if (currentConversation) {
                 syncMessagesWithDatabase(userId, currentConversation.id);
             }
-        }, 60000); // 60 segundos
+        }, 60000);
 
         return () => clearInterval(interval);
     }, [currentConversation, messages, userId]);
@@ -109,20 +109,7 @@ const ChatSection = ({ userId }) => {
 
             try {
                 const aiResponse = await aiProvider.generateResponse(input);
-
-                let displayText = '';
-                const interval = 0.1;
-                for (let i = 0; i < aiResponse.length; i++) {
-                    displayText += aiResponse[i];
-                    aiMessage.content = displayText;
-                    setMessages((prevMessages) => {
-                        const updatedMessages = [...prevMessages];
-                        updatedMessages[updatedMessages.length - 1] = { ...aiMessage };
-                        localStorage.setItem(`messages_${convId}`, JSON.stringify(updatedMessages));
-                        return updatedMessages;
-                    });
-                    await new Promise((resolve) => setTimeout(resolve, interval));
-                }
+                aiMessage.content = aiResponse;
 
                 const updatedAiMessage = await addAiMessage(userId, convId, aiMessage);
                 if (!updatedAiMessage) return;
@@ -148,7 +135,6 @@ const ChatSection = ({ userId }) => {
             }
         }
     };
-
 
     const handleStop = () => {
         if (controllerRef.current) {
@@ -187,19 +173,12 @@ const ChatSection = ({ userId }) => {
     };
 
     const selectConversation = (conversation) => {
-        setCurrentConversation(conversation.title);
+        setCurrentConversation(conversation);
     };
 
     const handleTabChange = (event, newValue) => {
         setActiveTab(newValue);
-
-        if (newValue === 1) {
-            setCurrentConversation({ title: 'Bem-vindo ao chat da comunidade! Sinta-se à vontade para fazer perguntas e interagir com os outros membros.' });
-        } else if (currentConversation && currentConversation.title.includes('chat da comunidade')) {
-            setCurrentConversation(null);
-        }
     };
-
 
     return (
         <Box display="flex" flexDirection="column" height="100vh" width="100vw" pt={8}>
@@ -213,9 +192,11 @@ const ChatSection = ({ userId }) => {
                 setMessages={setMessages}
                 selectConversation={selectConversation}
                 userId={userId}
-                activeTab={activeTab} // Passe o estado da aba ativa
-                handleTabChange={handleTabChange} // Passe a função de troca de aba
             />
+            <Tabs value={activeTab} onChange={handleTabChange} indicatorColor="primary" textColor="primary" centered>
+                <Tab label="Conversa" />
+                <Tab label="Chat Online" />
+            </Tabs>
             {activeTab === 0 && (
                 <Box
                     flex={1}
@@ -225,7 +206,24 @@ const ChatSection = ({ userId }) => {
                     color={theme.palette.text.primary}
                 >
                     {messages.map((message, index) => (
-                        <Message key={index} message={message.content} isUser={message.sender === 'Você'} userImage={userImage} />
+                        <Box
+                            key={index}
+                            display="flex"
+                            justifyContent={message.sender === 'Você' ? 'flex-end' : 'flex-start'}
+                            mb={1}
+                        >
+                            <Box
+                                maxWidth="70%"
+                                px={2}
+                                py={1}
+                                borderRadius="15px"
+                                bgcolor={message.sender === 'Você' ? theme.palette.primary.main : theme.palette.background.paper}
+                                color={message.sender === 'Você' ? theme.palette.primary.contrastText : theme.palette.text.primary}
+                                boxShadow={3}
+                            >
+                                <Typography variant="body2">{message.content}</Typography>
+                            </Box>
+                        </Box>
                     ))}
                     {apiUnavailable && (
                         <Typography variant="body2" color="error" align="center">
@@ -234,30 +232,26 @@ const ChatSection = ({ userId }) => {
                     )}
                 </Box>
             )}
-            {activeTab === 1 && <ChatOnline
-
-            />} {
-
-            }
-            <Paper
-                component="form"
-                square
-                elevation={3}
-                style={{
-                    padding: '10px 20px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    position: 'sticky',
-                    bottom: 0,
-                    backgroundColor: theme.palette.background.paper,
-                    justifyContent: 'center'
-                }}
-                onSubmit={(e) => {
-                    e.preventDefault();
-                    handleSend();
-                }}
-            >
-                {activeTab === 0 && (
+            {activeTab === 1 && <ChatOnline />}
+            {activeTab === 0 && (
+                <Paper
+                    component="form"
+                    square
+                    elevation={3}
+                    style={{
+                        padding: '10px 20px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        position: 'sticky',
+                        bottom: 0,
+                        backgroundColor: theme.palette.background.paper,
+                        justifyContent: 'center'
+                    }}
+                    onSubmit={(e) => {
+                        e.preventDefault();
+                        handleSend();
+                    }}
+                >
                     <Grid container spacing={2} alignItems="center" justifyContent="center" style={{ maxWidth: '600px', minWidth: '75%' }}>
                         <Grid item xs={isSmallScreen ? 8 : 10}>
                             <TextField
@@ -302,8 +296,8 @@ const ChatSection = ({ userId }) => {
                             />
                         </Grid>
                     </Grid>
-                )}
-            </Paper>
+                </Paper>
+            )}
         </Box>
     );
 };

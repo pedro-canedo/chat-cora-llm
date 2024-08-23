@@ -1,13 +1,12 @@
-// frontend/src/components/cora-sidebar/SideNav.jsx
 import React from 'react';
-import { Drawer, List, ListItem, ListItemText, Divider, Button, IconButton } from '@mui/material';
+import { Drawer, List, ListItem, ListItemText, Divider, Button, IconButton, Tabs, Tab, Box } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import DeleteIcon from '@mui/icons-material/Delete';
 import { auth } from '../../firebaseConfig';
-import { signOut, deleteUser } from 'firebase/auth';
+import { signOut } from 'firebase/auth';
 import { deleteConversation } from '../../services/firebase/db';
 
-const SideNav = ({ open, handleMenuClose, clearChat, handleImageUpload, conversations = [], setMessages, selectConversation, userId }) => {
+const SideNav = ({ open, handleMenuClose, clearChat, handleImageUpload, conversations = [], setMessages, selectConversation, userId, activeTab, handleTabChange }) => {
 
     const handleLogout = () => {
         signOut(auth).then(() => {
@@ -27,29 +26,41 @@ const SideNav = ({ open, handleMenuClose, clearChat, handleImageUpload, conversa
 
     const handleNewChat = () => {
         selectConversation(null);
-        setMessages([])
+        setMessages([]);
         handleMenuClose();
     };
 
     return (
         <Drawer anchor="left" open={open} onClose={handleMenuClose}>
-            <div style={{ width: 250, padding: 20 }}>
+            <div style={{ width: 280, padding: 20 }}>
                 <IconButton onClick={handleMenuClose}>
                     <CloseIcon />
                 </IconButton>
-                <Button fullWidth variant="contained" color="primary" style={{ margin: '10px 0' }} onClick={handleNewChat}>
-                    + Nova Conversa
-                </Button>
-                <List>
-                    {conversations.map(convo => (
-                        <ListItem button key={convo.id} onClick={() => selectConversation(convo)}>
-                            <ListItemText primary={convo.title} />
-                            <IconButton edge="end" aria-label="delete" onClick={() => handleDeleteConversation(convo.id)}>
-                                <DeleteIcon />
-                            </IconButton>
-                        </ListItem>
-                    ))}
-                </List>
+
+                {/* Tabs para alternar entre Conversa e Chat Online */}
+                <Tabs value={activeTab} onChange={handleTabChange} indicatorColor="primary" textColor="primary" centered>
+                    <Tab label="Cora IA" />
+                    <Tab label="Comunidade" />
+                </Tabs>
+
+                {activeTab === 0 && (
+                    <>
+                        <Button fullWidth variant="contained" color="primary" style={{ margin: '10px 0' }} onClick={handleNewChat}>
+                            + Nova Conversa
+                        </Button>
+                        <List>
+                            {conversations.map(convo => (
+                                <ListItem button key={convo.id} onClick={() => selectConversation(convo)}>
+                                    <ListItemText primary={convo.title} />
+                                    <IconButton edge="end" aria-label="delete" onClick={() => handleDeleteConversation(convo.id)}>
+                                        <DeleteIcon />
+                                    </IconButton>
+                                </ListItem>
+                            ))}
+                        </List>
+                    </>
+                )}
+
                 <Divider />
                 <List>
                     <ListItem button onClick={clearChat}>
