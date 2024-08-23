@@ -11,10 +11,17 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - run: yarn run build
-      - uses: FirebaseExtended/action-hosting-deploy@v0
+      - name: Navigate to frontend directory
+        working-directory: ./chat-cora-llm/frontend
+        run: yarn install
+      - name: Build project
+        working-directory: ./chat-cora-llm/frontend
+        run: yarn run build
+      - name: Deploy to Firebase Hosting
+        uses: FirebaseExtended/action-hosting-deploy@v0
         with:
           repoToken: ${{ secrets.GITHUB_TOKEN }}
           firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_PCO_SYSTEMS }}
           channelId: live
           projectId: pco-systems
+        working-directory: ./chat-cora-llm/frontend
