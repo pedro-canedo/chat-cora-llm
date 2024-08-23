@@ -26,11 +26,19 @@ const ChatOnline = () => {
         setLoading(false);
     };
 
+    const generateAvatarColor = (name, email) => {
+        const identifier = name + email;  // Combina o nome e o email para garantir uma variação única
+        let hash = 0;
+        for (let i = 0; i < identifier.length; i++) {
+            hash = identifier.charCodeAt(i) + ((hash << 5) - hash);
+        }
+        const color = `hsl(${hash % 360}, 70%, 60%)`;
+        return color;
+    };
+
     const getUserAvatar = (sender) => {
-        const user = users.find((user) => user.email === sender);
-        const colorOptions = [theme.palette.secondary.main, theme.palette.error.main, theme.palette.warning.main, theme.palette.success.main];
-        const colorIndex = user ? user.email.length % colorOptions.length : 0;
-        const avatarColor = colorOptions[colorIndex];
+        const user = users.find((user) => user.name === sender);
+        const avatarColor = user ? generateAvatarColor(user.name, user.email) : theme.palette.primary.main;
 
         return user ? (
             <Tooltip title={user.name} arrow>
@@ -113,7 +121,7 @@ const ChatOnline = () => {
                         {users.map((user) => (
                             <Grid item xs={3} key={user.uid}>
                                 <Tooltip title={user.name} arrow>
-                                    <Avatar sx={{ bgcolor: theme.palette.primary.main }}>
+                                    <Avatar sx={{ bgcolor: generateAvatarColor(user.name, user.email) }}>
                                         {user.name.charAt(0)}
                                     </Avatar>
                                 </Tooltip>
