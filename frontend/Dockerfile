@@ -1,12 +1,12 @@
-FROM oven/bun:1 as base
+FROM node:18-alpine as base
 
 WORKDIR /usr/src/app
 
-COPY package.json bun.lockb ./
-RUN bun install
+COPY package.json yarn.lock ./
+RUN yarn install
 
 COPY . .
 
 EXPOSE 5173/tcp
 
-CMD ["bun", "run", "dev", "--host" ]
+CMD ["yarn", "dev"]
